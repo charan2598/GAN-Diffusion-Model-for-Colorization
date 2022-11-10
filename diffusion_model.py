@@ -39,9 +39,9 @@ class Block(nn.module):
         self.bn1 = nn.BatchNorm2d(out_channels)
         self.bn2 = nn.BatchNorm2d(out_channels)
 
-    def forward(self, x, timestep):
+    def forward(self, x, timestep_embedding):
         shortcut = self.shortcut(x)
-        t = self.relu(self.time(timestep))
+        t = self.relu(self.time(timestep_embedding))
         x = nn.ReLU()(self.bn1(self.conv1(x)))
         x = x + t
         x = nn.ReLU()(self.bn2(self.conv2(x)))
@@ -49,29 +49,29 @@ class Block(nn.module):
         return nn.ReLU()(x)
 
 class downStep(nn.Module):
-  def __init__(self, in_channels, out_channels, timestep):
+  def __init__(self, in_channels, out_channels, timestep_embedding):
     super(downStep, self).__init__()
     #todo
     self.maxp = nn.Sequential(nn.MaxPool2d(2),
-        Block(in_channels, out_channels, timestep)
+        Block(in_channels, out_channels, timestep_embedding)
         )
 
-  def forward(self, x, timestep):
+  def forward(self, x, timestep_embedding):
     #todo
-    down1 = self.maxp(x, timestep)
-    # t = self.relu(self.time(timestep))
+    down1 = self.maxp(x, timestep_embedding)
+    # t = self.relu(self.time(timestep_embedding))
     # down1 = down1 + t
     return down1
 
 
 class upStep(nn.Module):
-  def __init__(self, in_channels, out_channels, timestep):
+  def __init__(self, in_channels, out_channels, timestep_embedding):
     super(upStep, self).__init__()
     #todo
     self.expanding = nn.ConvTranspose2d(in_channels, out_channels, kernel_size=2,stride = 2)#Upsample(scale_factor = 2, mode='bilinear'
-    self.c = Block(in_channels, out_channels, timestep)
+    self.c = Block(in_channels, out_channels, timestep_embedding)
 
-  def forward(self, x, y, timestep):
+  def forward(self, x, y, timestep_embedding):
     #todo
     x1 = self.expanding(x)
     crop_x = (y.size()[2] - x1.size()[2]) // 2
@@ -80,32 +80,53 @@ class upStep(nn.Module):
     y = y[:,:,crop_x:y.size()[2] - crop_x,crop_y:y.size()[3] - crop_y] # 12: 48, 12:48
 
     blk = torch.cat([y,x1], dim=1)
-    output = self.c(blk, timestep)
-    #t = self.relu(self.time(timestep))
+    output = self.c(blk, timestep_embedding)
+    #t = self.relu(self.time(timestep_embedding))
     #output = output + t
     return output
 
+class Sine_Cosine_Embedding(nn.module):
+    def __init__(self, dim):
+        self.dim = dim
+        self.n = 10000
+    
+    def forward(self, timesteps):
+        # Expecting timesteps as [[0],[1],[2],[3],[4],....,[T]]
+        i = len(timesteps)
+        denominator = self.n**((2*i)//self.dim)
+        timesteps = timesteps/denominator
+        return torch.hstack(torch.sin(timesteps), torch.cos(timesteps))
+        
 class Diffusion_model(nn.module):
-    def __init__(self):
-        timestep = 32
+    def __init__(self, beta_start, beta_end, timesteps):
+        self.beta_start = beta_start
+        self.beta_end = beta_end
+        self.timesteps = timesteps
+        self.beta_schedule = self.linearBetaSchedule()
+        self.alpha = self.alphaGeneration()
+        self.alpha_bar = self.alphaBar()    
+        self.sqrt_alpha_bar = torch.sqrt(self.alpha_bar)
+        self.sqrt_one_minus_alpha_bar = torch.sqrt(1.0-self.alpha_bar)
+
+        timestep_embedding = 32
         self.time = nn.Sequential(
-            Sine_Cosine_Embedding(timestep),
-            nn.Linear(timestep, timestep),
+            Sine_Cosine_Embedding(timestep_embedding),
+            nn.Linear(timestep_embedding, timestep_embedding),
             nn.ReLU()
         )
         self.c1 = Block(1,64, 1)
-        self.d1 = downStep(64, 128, timestep)
-        self.d2 = downStep(128, 256, timestep)
-        self.d3 = downStep(256, 512, timestep)
-        self.d4 = downStep(512,1024, timestep)
-        self.u1 = upStep(1024, 512, timestep)
-        self.u2 = upStep(512, 256, timestep)
-        self.u3 = upStep(256, 128, timestep)
-        self.u4 = upStep(128, 64, timestep)
+        self.d1 = downStep(64, 128, timestep_embedding)
+        self.d2 = downStep(128, 256, timestep_embedding)
+        self.d3 = downStep(256, 512, timestep_embedding)
+        self.d4 = downStep(512,1024, timestep_embedding)
+        self.u1 = upStep(1024, 512, timestep_embedding)
+        self.u2 = upStep(512, 256, timestep_embedding)
+        self.u3 = upStep(256, 128, timestep_embedding)
+        self.u4 = upStep(128, 64, timestep_embedding)
         self.c2 = nn.Conv2d(64, 1, kernel_size=1) 
 
-    def forward(self, x, timestep):
-        t = self.time(timestep)
+    def forward(self, x, timestep_embedding):
+        t = self.time(timestep_embedding)
         y = self.c1(x, t)
         
         l1 = self.d1(y, t)
@@ -128,15 +149,10 @@ class Diffusion_model(nn.module):
 
         return out
 
+    def predict(self, batch):
+        noisedBatch = self.forwardNoise(batch, self.timesteps)
+        for timestep in reversed(self.timesteps):
+            noisedBatch = noisedBatch - self.forward(noisedBatch, timestep)
+        coloredBatch = noisedBatch
+        return coloredBatch
 
-class Sine_Cosine_Embedding(nn.module):
-    def __init__(self, dim):
-        self.dim = dim
-        self.n = 10000
-    
-    def forward(self, timesteps):
-        # Expecting timesteps as [[0],[1],[2],[3],[4],....,[T]]
-        i = len(timesteps)
-        denominator = self.n**((2*i)//self.dim)
-        timesteps = timesteps/denominator
-        return torch.hstack(torch.sin(timesteps), torch.cos(timesteps))
