@@ -41,7 +41,7 @@ class Block(nn.module):
 
     def forward(self, x, timestep_embedding):
         shortcut = self.shortcut(x)
-        t = self.relu(self.time(timestep_embedding))
+        t = nn.Relu()(self.time(timestep_embedding))[(..., ) + (None, ) * 2] # Needs to be worked on.
         x = nn.ReLU()(self.bn1(self.conv1(x)))
         x = x + t
         x = nn.ReLU()(self.bn2(self.conv2(x)))
@@ -123,7 +123,7 @@ class Diffusion_model(nn.module):
         self.u2 = upStep(512, 256, timestep_embedding)
         self.u3 = upStep(256, 128, timestep_embedding)
         self.u4 = upStep(128, 64, timestep_embedding)
-        self.c2 = nn.Conv2d(64, 1, kernel_size=1) 
+        self.c2 = nn.Conv2d(64, 3, kernel_size=1) 
 
     def forward(self, x, timestep_embedding):
         t = self.time(timestep_embedding)
