@@ -1,34 +1,9 @@
 import torch
 from torch import nn
 import numpy as np
-class ForwardDiffusion():
+import math
 
-    def __init__(self, beta_start, beta_end, timesteps):
-        self.beta_start = beta_start
-        self.beta_end = beta_end
-        self.timesteps = timesteps
-        self.beta_schedule = self.linearBetaSchedule()
-        self.alpha = self.alphaGeneration()
-        self.alpha_bar = self.alphaBar()    
-        self.sqrt_alpha_bar = torch.sqrt(self.alpha_bar)
-        self.sqrt_one_minus_alpha_bar = torch.sqrt(1.0-self.alpha_bar)
-    
-    def alphaBar(self):
-        return torch.cumprod(self.alpha, dim=0)
-
-    def alphaGeneration(self):
-        return 1.0-self.beta_schedule
-    
-    def linearBetaSchedule(self):
-        return torch.linspace(self.beta_start, self.beta_end, self.timesteps)
-    
-    def forwardNoise(self, x, t):
-        noise = torch.randn_like(x.float())
-        alpha_root_bar =  torch.reshape(self.sqrt_alpha_bar[t], (-1, 1, 1, 1))
-        one_min_alpha_root_bar = torch.reshape(self.sqrt_one_minus_alpha_bar[t], (-1, 1, 1, 1))
-        noisy_image = ( alpha_root_bar * x ) + one_min_alpha_root_bar * noise
-        return noisy_image, noise
-class Block(nn.module):
+class Block(nn.Module):
     def __init__(self,in_channels, out_channels, time_emb_dim):
         super(Block, self).__init__()
         self.time =  nn.Linear(time_emb_dim, out_channels)
@@ -85,20 +60,37 @@ class upStep(nn.Module):
     #output = output + t
     return output
 
-class Sine_Cosine_Embedding(nn.module):
-    def __init__(self, dim):
-        self.dim = dim
-        self.n = 10000
+# class Sine_Cosine_Embedding(nn.Module):
+#     def __init__(self, dim):
+#         super(Sine_Cosine_Embedding, self).__init__()
+#         self.dim = dim
+#         self.n = 10000
     
-    def forward(self, timesteps):
-        # Expecting timesteps as [[0],[1],[2],[3],[4],....,[T]]
-        i = len(timesteps)
-        denominator = self.n**((2*i)//self.dim)
-        timesteps = timesteps/denominator
-        return torch.hstack(torch.sin(timesteps), torch.cos(timesteps))
+#     def forward(self, timesteps):
+#         # Expecting timesteps as [[0],[1],[2],[3],[4],....,[T]]
+#         i = (timesteps)
+#         denominator = self.n**((2*i)//self.dim)
+#         timesteps = torch.tensor(timesteps/denominator)
+#         return torch.hstack((torch.sin(timesteps), torch.cos(timesteps)))
+
+class SinusoidalPositionEmbeddings(nn.Module):
+    def __init__(self, dim):
+        super(SinusoidalPositionEmbeddings, self).__init__()
+        self.dim = dim
+
+    def forward(self, time):
+        device = torch.device('cpu') # changed from time.device to cpu
+        half_dim = self.dim // 2
+        embeddings = math.log(10000) / (half_dim - 1)
+        embeddings = torch.exp(torch.arange(half_dim, device=device) * -embeddings)
+        embeddings = time[:, None] * embeddings[None, :]
+        embeddings = torch.cat((embeddings.sin(), embeddings.cos()), dim=-1)
+        # TODO: Double check the ordering here
+        return embeddings
         
-class Diffusion_model(nn.module):
+class Diffusion_model(nn.Module):
     def __init__(self, beta_start, beta_end, timesteps):
+        super(Diffusion_model, self).__init__()
         self.beta_start = beta_start
         self.beta_end = beta_end
         self.timesteps = timesteps
@@ -110,11 +102,12 @@ class Diffusion_model(nn.module):
 
         timestep_embedding = 32
         self.time = nn.Sequential(
-            Sine_Cosine_Embedding(timestep_embedding),
+            #Sine_Cosine_Embedding(timestep_embedding),
+            SinusoidalPositionEmbeddings(timestep_embedding),
             nn.Linear(timestep_embedding, timestep_embedding),
             nn.ReLU()
         )
-        self.c1 = Block(1,64, 1)
+        self.c1 = Block(1,64, 32)
         self.d1 = downStep(64, 128, timestep_embedding)
         self.d2 = downStep(128, 256, timestep_embedding)
         self.d3 = downStep(256, 512, timestep_embedding)
@@ -123,9 +116,25 @@ class Diffusion_model(nn.module):
         self.u2 = upStep(512, 256, timestep_embedding)
         self.u3 = upStep(256, 128, timestep_embedding)
         self.u4 = upStep(128, 64, timestep_embedding)
-        self.c2 = nn.Conv2d(64, 3, kernel_size=1) 
+        self.c2 = nn.Conv2d(64, 3, kernel_size=1)
 
-    def forward(self, x, timestep_embedding):
+    def alphaGeneration(self):
+        return 1.0-self.beta_schedule
+
+    def linearBetaSchedule(self):
+        return torch.linspace(self.beta_start, self.beta_end, self.timesteps)
+
+    def alphaBar(self):
+        return torch.cumprod(self.alpha, dim=0)
+
+    def forwardNoise(self, x, t):
+        noise = torch.randn_like(x.float())
+        alpha_root_bar =  torch.reshape(self.sqrt_alpha_bar[t], (-1, 1, 1, 1))
+        one_min_alpha_root_bar = torch.reshape(self.sqrt_one_minus_alpha_bar[t], (-1, 1, 1, 1))
+        noisy_image = ( alpha_root_bar * x ) + one_min_alpha_root_bar * noise
+        return noisy_image, noise
+
+    def forward(self, x, timestep_embedding=32):
         t = self.time(timestep_embedding)
         y = self.c1(x, t)
         

@@ -7,11 +7,17 @@ from dataloader import train_dataloader, test_dataloader
 
 from matplotlib import pyplot as plt
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cpu' if torch.cuda.is_available() else 'cpu') # Modified to CPU 
+print(device)
+
+# Model Hyper parameters
+beta_start = 0.0001
+beta_end = 0.02
+timesteps = 500
 
 # Model
-model = Diffusion_model()
-model.to(device)
+model = Diffusion_model(beta_start, beta_end, timesteps)
+model = model.to(device)
 
 # Create loss function object
 criterion = ... # TODO: Define Loss function.
@@ -23,20 +29,21 @@ learning_rate = 1e-3
 optimizer  = Adam(model.parameters(), lr=learning_rate, weight_decay=0.0005)
 
 # define training loop parameters
-num_epochs = 100
+num_epochs = 1
 
 # Gray scale Tranform
-gray_transform = transforms.Grayscale()
+transform = transforms.Compose([transforms.Grayscale()])
 
 # training loop
 for epoch in range(num_epochs):
     epoch_loss = 0
     for _, data in enumerate(train_dataloader):
         color_images, _ = data
-        gray_scale_images = gray_transform(color_images)
+        gray_scale_images = transform(color_images)
+        gray_scale_images = gray_scale_images.to(device)
 
         optimizer.zero_grad()
-        output = model(...) # TODO: Pass required input to the model and get output.
+        output = model(gray_scale_images) # TODO: Pass required input to the model and get output.
 
         loss = criterion(...) # TODO: Add the required loss function with appropriate parameters.
 
@@ -50,9 +57,9 @@ for epoch in range(num_epochs):
 with torch.no_grad():
     for _, data in enumerate(test_dataloader):
         color_image, _ = data
-        gray_scale_image = gray_transform(color_image)
+        gray_scale_image = transform(color_image)
 
-        output = model(...) # TODO: Provide required input to the model.
+        output = model(gray_scale_images) # TODO: Provide required input to the model.
 
         # TODO: We can calculate the FID and IS scores here.
 

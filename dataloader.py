@@ -9,8 +9,8 @@ batch_size = 4
 transform = transforms.Compose([transforms.ToTensor()])
 
 # Define dataset class or object of CIFAR
-trainset = datasets.CIFAR10(root="./data", train=True, download=True, transforms = transform)
-testset = datasets.CIFAR10(root="./data", train=False, download=True, transforms = transform)
+trainset = datasets.CIFAR10(root="./data", train=True, download=True, transform = transform)
+testset = datasets.CIFAR10(root="./data", train=False, download=True, transform = transform)
 
 # Define the dataloader for train and test
 train_dataloader = DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=0)
