@@ -4,7 +4,7 @@ This repository contains the code for Image Colorization using Generative Advers
 
 ## Generative Adversarial Network Model:
 
-The colorization GAN code is available as Jupyter Notebook and is quite straight forward. This GAN model is trained over Stanford Cars, COCO dataset and Landscapes dataset.
+The colorization GAN code is available as Jupyter Notebook and is quite straight forward. This GAN model is trained over Stanford Cars, COCO dataset and Landscapes dataset for a fair number of epochs.
 
 Link to GAN checkpoint: [256x256_GAN_checkpoint.pt](https://drive.google.com/file/d/1qgfyvTK-pO4g3QmtEYrJwkfNq7ql6hra/view?usp=share_link)
 
@@ -38,3 +38,14 @@ mpiexec -n 1 python scripts/colorize_train.py --data_dir "path/to/orig_dataset" 
 ```
 
 As this is a class conditioned model we will be concatenating the gray scale image or an equivalent to the noise during the sampling phase. So we would need the gray scale or equivalent images in another directory where the original data is present. eg. "path/to/dataset"
+
+## Sample Outputs
+### Sample Outputs from GAN
+
+<img src="https://github.com/charan250498/GAN-Diffusion-Model-for-Colorization/blob/master/Images/1.png" width="750">
+
+<img src="https://github.com/charan250498/GAN-Diffusion-Model-for-Colorization/blob/master/Images/2.png" width="750">
+
+### Sample Outputs from Diffusion
+
+<img src="https://github.com/charan250498/GAN-Diffusion-Model-for-Colorization/blob/master/Images/3.png" width="350">
