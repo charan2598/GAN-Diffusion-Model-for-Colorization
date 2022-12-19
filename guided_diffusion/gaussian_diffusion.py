@@ -509,7 +509,6 @@ class GaussianDiffusion:
         assert isinstance(shape, (tuple, list))
         if noise is not None:
             img = noise
-            print("!!!!!!!!!!!!!!!!! Used image provided by user") ##################
         else:
             img = th.randn(*shape, device=device)
         indices = list(range(self.num_timesteps))[::-1]

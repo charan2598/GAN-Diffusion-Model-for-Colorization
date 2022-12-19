@@ -108,6 +108,7 @@ class ImageDataset(Dataset):
             pil_image.load()
             filename = path
         pil_image = pil_image.convert("RGB")
+        pil_image = pil_image.resize((64,64)) ##################################### Added to resize the input condition.
 
         if self.random_crop:
             arr = random_crop_arr(pil_image, self.resolution)

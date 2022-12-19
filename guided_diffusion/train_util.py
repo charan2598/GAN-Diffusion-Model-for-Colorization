@@ -151,7 +151,7 @@ class TrainLoop:
             self.opt.load_state_dict(state_dict)
 
     def run_loop(self):
-        for i in range(0,30):
+        for i in range(0,1000):
         #while (
         #    not self.lr_anneal_steps
         #    or self.step + self.resume_step < self.lr_anneal_steps

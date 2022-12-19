@@ -671,12 +671,11 @@ class ColorizeModel(UNetModel):
     """
 
     def __init__(self, image_size, in_channels, *args, **kwargs):
-        super().__init__(image_size, in_channels, *args, **kwargs)
+        print(args)
+        super().__init__(image_size, in_channels*2, *args, **kwargs)
 
     def forward(self, x, timesteps, gray_scale=None, **kwargs):
-        print("x.shape", x.shape)
-        print("gray_scale", gray_scale.shape)
-        #x = th.cat([x, gray_scale], dim=1)
+        x = th.cat([x, gray_scale], dim=1)
         return super().forward(x, timesteps, **kwargs)
 
 #####################################################

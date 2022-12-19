@@ -10,6 +10,7 @@ import blobfile as bf
 import numpy as np
 import torch as th
 import torch.distributed as dist
+import torchvision.transforms as transforms
 
 from matplotlib import pyplot as plt
 
@@ -109,6 +110,8 @@ def main():
     dist.barrier()
     logger.log("sampling complete")
 
+transform = transforms.Compose([transforms.Resize((64, 64))])
+
 def load_data_for_worker(base_samples, batch_size, class_cond):
     with bf.BlobFile(base_samples, "rb") as f:
         obj = np.load(f)
@@ -125,9 +128,14 @@ def load_data_for_worker(base_samples, batch_size, class_cond):
             if class_cond:
                 label_buffer.append(label_arr[i])
             if len(buffer) == batch_size:
+                print(buffer[0].shape)
                 batch = th.from_numpy(np.stack(buffer)).float()
+                batch = batch.permute(0,3,1,2)
+                print(batch.shape)
+                batch = transform(batch)
+                print(batch.shape)
                 batch = batch / 127.5 - 1.0
-                batch = batch.permute(0, 3, 1, 2)
+                #batch = batch.permute(0, 3, 1, 2)
                 res = dict(gray_scale=batch)
                 #res = dict()
                 if class_cond:
@@ -139,7 +147,7 @@ def create_argparser():
     defaults = dict(
         clip_denoised=True,
         num_samples=10000,
-        batch_size=16,
+        batch_size=8,
         use_ddim=False,
         base_samples="",
         model_path="",

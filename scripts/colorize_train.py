@@ -83,7 +83,8 @@ def load_colorize_data(data_dir, batch_size, image_size, class_cond=False):
     for color_batch, model_kwargs in data:
         cond_list = []
         for i, path in enumerate(model_kwargs["path"]):
-            model_kwargs["path"][i] = model_kwargs["path"][i].replace("orig_land", "land")
+            #model_kwargs["path"][i] = model_kwargs["path"][i].replace("orig_land", "land")
+            model_kwargs["path"][i] = model_kwargs["path"][i].replace("orig_cars", "cars")
             cond_list.append(transform(Image.open(model_kwargs["path"][i])).unsqueeze(0))
         model_kwargs.pop("path")
         model_kwargs["gray_scale"] = torch.cat(tuple(cond_list), dim=0)
