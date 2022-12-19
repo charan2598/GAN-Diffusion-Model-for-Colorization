@@ -4,10 +4,9 @@ This repository contains the code for Image Colorization using Generative Advers
 
 ## Generative Adversarial Network Model:
 
-The colorization GAN code is available as Jupyter Notebook and is quite staright forward. This GAN model is trained over Stanford Cars, COCO dataset and Landscapes dataset.
+The colorization GAN code is available as Jupyter Notebook and is quite straight forward. This GAN model is trained over Stanford Cars, COCO dataset and Landscapes dataset.
 
 Link to GAN checkpoint: [256x256_GAN_checkpoint.pt](https://drive.google.com/file/d/1qgfyvTK-pO4g3QmtEYrJwkfNq7ql6hra/view?usp=share_link)
-
 
 ## Guided-Diffusion Model:
 
@@ -16,6 +15,11 @@ This code is a replica of the OpenAI's Guided-Diffusion code [Original Repo](htt
 This model is trained only for a few iterations over just Stanford Cars Dataset.
 
 Link to trained model: [64x64_cond_diffusion.pt](https://drive.google.com/file/d/1QGrDCOLH__M7Xn_REK8X5bDt4a7c8sVR/view?usp=share_link)
+
+You might want to run this command before getting started.
+```
+pip install -e .
+```
 
 ### Sampling
 
